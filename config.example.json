@@ -1,0 +1,9 @@
+{
+  "mc_world_path" : "/path/to/world",
+  "resource_paths" : [
+    "/path/to/resource_path"
+  ],
+  "behavior_paths" : [
+    "/path/to/behavior_path"
+  ]
+}
