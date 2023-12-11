@@ -6,3 +6,9 @@ check_path() {
         exit 1
     fi
 }
+
+delete_folder_if_exists() {
+    path=$1
+
+    [ -d "$path" ] && rm -rf "$path"
+}

@@ -19,14 +19,14 @@ check_property "version" "$version"
 
 log "info" "Downgrade to $version for $uuid"
 
-if [ "$type" == "resource" ]; then
+if [ "$type" == "mcpack" ]; then
     restore_pack "$uuid" "$version" "$RESOURCE_PACKS_PATH" "$RESOURCE_PACKS_FILE" "$RESOURCE_PACK_HISTORY_FILE"
     exit 0
 fi
 
-if [ "$type" == "mod" ]; then
+if [ "$type" == "mcaddon" ]; then
     restore_pack "$uuid" "$version" "$BEHAVIOR_PACKS_PATH" "$BEHAVIOR_PACKS_FILE" "$BEHAVIOR_PACK_HISTORY_FILE"
     exit 0
 fi
 
-log "error" "The type doesn't have the accepted values (resource, mod)"
+log "error" "The type doesn't have the accepted values (mcpack, mcaddon)"

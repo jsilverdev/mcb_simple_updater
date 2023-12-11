@@ -4,7 +4,7 @@ update_version_in_packs_file() {
     local uuid=$1
     local current_version=$2
     local packs_file=$3
-    local tmp_file="/tmp/${uuid}_tmp.json"
+    local tmp_file="${uuid}_tmp.json"
 
     if [ -f "$packs_file" ]; then
         uuid_found=$(jq -r --arg uuid "$uuid" '.[] | select(.pack_id == $uuid) | .pack_id' "$packs_file")
@@ -23,7 +23,7 @@ update_version_in_pack_history_file() {
     local uuid=$1
     local current_version=$2
     local pack_history_file=$3
-    local tmp_file="/tmp/${uuid}_tmp.json"
+    local tmp_file="${uuid}_tmp.json"
 
     if [ -f "$pack_history_file" ]; then
         uuid_found=$(jq -r --arg uuid "$uuid" '.packs[] | select(.uuid == $uuid) | .uuid' "$pack_history_file")
@@ -67,6 +67,7 @@ update_packs() {
     local world_packs_file=$2
     local world_pack_history_file=$3
     local world_pack_paths=$4
+    local world_pack_extension=$5
 
     if [ -d "$world_packs_path" ] && [ -n "$world_pack_paths" ]; then
 
@@ -82,14 +83,38 @@ update_packs() {
                 while IFS= read -r path; do
 
                         # If not exists omit
-                        [ ! -d "$path" ] && continue
+                        [ ! -e "$path" ] && continue
+
+                        if [ -f "$path" ] && [[ "$path" == *"$world_pack_extension" ]]; then
+
+                            # Check if is a zip file
+                            ! file -b --mime-type "$path" | grep -q "zip" && continue
+
+                            temp_dir=$(mktemp -d)
+                            unzip -q "$path" -d "$temp_dir"
+                            top_level_dir=$(find "$temp_dir" -mindepth 1 -maxdepth 1 -type d -printf '%P\n')
+                            path="$temp_dir/$top_level_dir"
+                        fi
+
+                        if [ ! -d "$path" ]; then
+                            delete_folder_if_exists "$temp_dir"
+                            continue
+                        fi
 
                         uuid=$(get_uuid_of_pack "$path")
                         version=$(get_version_of_pack "$path")
 
-                        [ "$uuid" != "$pack_folder_uuid" ] && continue
-                        [ "$(get_latest_version "$pack_folder_version" "$version")" == "$pack_folder_version" ] && continue
-                        log "version to update: $version"
+                        if [ "$uuid" != "$pack_folder_uuid" ]; then
+                            delete_folder_if_exists "$temp_dir"
+                            continue
+                        fi
+
+                        if [ "$(get_latest_version "$pack_folder_version" "$version")" == "$pack_folder_version" ]; then
+                            delete_folder_if_exists "$temp_dir"
+                            continue
+                        fi
+
+                        log "alert" "version to update: $version"
 
                         [ ! -d "$BACKUPS_PATH" ] && mkdir -p "$BACKUPS_PATH"
 
@@ -104,17 +129,18 @@ update_packs() {
                         mkdir "$pack_folder_path"
                         rsync -a --exclude='.git' "$path/" "$pack_folder_path/"
                         log "success" "The files in $pack_folder_path has been updated"
+                        delete_folder_if_exists "$temp_dir"
 
                         update_version_in_packs_file "$uuid" "$version" "$world_packs_file"
                         update_version_in_pack_history_file "$uuid" "$version" "$world_pack_history_file"
 
                 done <<< "$world_pack_paths"
-                log "\n"
+                log ""
 
         done < <(find "$world_packs_path" -mindepth 1 -maxdepth 1 -type d)
 
     else
-        log "alert" "No resource packs path exists or resources packs not defined"
+        log "alert" "No world packs path exists or world packs not defined"
     fi
 }
 

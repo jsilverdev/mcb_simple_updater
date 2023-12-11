@@ -35,6 +35,10 @@ check_dependencies() {
         missing_dependencies+=("jq")
     fi
 
+    if ! command -v unzip &> /dev/null; then
+        missing_dependencies+=("unzip")
+    fi
+
     if [ ! ${#missing_dependencies[@]} -eq 0 ]; then
         echo "Missing dependencies: ${missing_dependencies[*]}"
         exit 1

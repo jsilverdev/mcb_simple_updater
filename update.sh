@@ -8,8 +8,8 @@ source "$(dirname "$0")/utils/pack.sh"
 check_dependencies
 setup_config_properties
 
-log "info" "Update resource packs...\n"
-update_packs "$RESOURCE_PACKS_PATH" "$RESOURCE_PACKS_FILE" "$RESOURCE_PACK_HISTORY_FILE" "$RESOURCE_PACK_PATHS"
+log "Update resource packs...\n"
+update_packs "$RESOURCE_PACKS_PATH" "$RESOURCE_PACKS_FILE" "$RESOURCE_PACK_HISTORY_FILE" "$RESOURCE_PACK_PATHS" ".mcpack"
 
-log "info" "Update behaviour packs...\n"
-update_packs "$BEHAVIOR_PACKS_PATH" "$BEHAVIOR_PACKS_FILE" "$BEHAVIOR_PACK_HISTORY_FILE" "$BEHAVIOR_PACK_PATHS"
+log "Update behaviour packs...\n"
+update_packs "$BEHAVIOR_PACKS_PATH" "$BEHAVIOR_PACKS_FILE" "$BEHAVIOR_PACK_HISTORY_FILE" "$BEHAVIOR_PACK_PATHS" ".mcaddon"
