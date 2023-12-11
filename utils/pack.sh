@@ -61,14 +61,14 @@ get_latest_version() {
     printf '%s\n' "$new_version" "$current_version" | tr '-' '~' | sort -V | tail -n1 | tr '~' '-'
 }
 
-
+BACKUPS_PATH="backups"
 update_packs() {
-    local WORLD_PACKS_PATH=$1
-    local WORLD_PACKS_FILE=$2
-    local WORLD_PACK_HISTORY_FILE=$3
-    local WORLD_PACK_PATHS=$4
+    local world_packs_path=$1
+    local world_packs_file=$2
+    local world_pack_history_file=$3
+    local world_pack_paths=$4
 
-    if [ -d "$WORLD_PACKS_PATH" ] && [ -n "$WORLD_PACK_PATHS" ]; then
+    if [ -d "$world_packs_path" ] && [ -n "$world_pack_paths" ]; then
 
         while IFS= read -r pack_folder_path; do
 
@@ -91,19 +91,66 @@ update_packs() {
                         [ "$(get_latest_version "$pack_folder_version" "$version")" == "$pack_folder_version" ] && continue
                         log "version to update: $version"
 
-                        rm -rf "$pack_folder_path" && mkdir "$pack_folder_path"
-                        cp -r "$path/." "$pack_folder_path/."
+                        [ ! -d "$BACKUPS_PATH" ] && mkdir -p "$BACKUPS_PATH"
+
+                        path_to_backup="$BACKUPS_PATH/${pack_folder_uuid} - ${pack_folder_version}"
+
+                        if [ -d "$path_to_backup" ]; then
+                            log "alert" "This current version is alerady in backups folder"
+                            rm -rf "$pack_folder_path"
+                        else
+                            mv "$pack_folder_path" "$path_to_backup"
+                        fi
+                        mkdir "$pack_folder_path"
+                        rsync -a --exclude='.git' "$path/" "$pack_folder_path/"
                         log "success" "The files in $pack_folder_path has been updated"
 
-                        update_version_in_packs_file "$uuid" "$version" "$WORLD_PACKS_FILE"
-                        update_version_in_pack_history_file "$uuid" "$version" "$WORLD_PACK_HISTORY_FILE"
+                        update_version_in_packs_file "$uuid" "$version" "$world_packs_file"
+                        update_version_in_pack_history_file "$uuid" "$version" "$world_pack_history_file"
 
-                done <<< "$WORLD_PACK_PATHS"
+                done <<< "$world_pack_paths"
                 log "\n"
 
-        done < <(find "$WORLD_PACKS_PATH" -mindepth 1 -maxdepth 1 -type d)
+        done < <(find "$world_packs_path" -mindepth 1 -maxdepth 1 -type d)
 
     else
         log "alert" "No resource packs path exists or resources packs not defined"
     fi
+}
+
+restore_pack() {
+    uuid=$1
+    version=$2
+    world_packs_path=$3
+    world_packs_file=$4
+    world_pack_history_file=$5
+
+    path_to_restore="$BACKUPS_PATH/${uuid} - ${version}"
+
+    if [ ! -d "$path_to_restore" ]; then
+        log "alert" "The uuid $uuid with version $version doesn't exists"
+        exit 1
+    fi
+
+    while IFS= read -r pack_folder_path; do
+
+        pack_folder_uuid=$(get_uuid_of_pack "$pack_folder_path")
+        pack_folder_version=$(get_version_of_pack "$pack_folder_path")
+
+        [ "$uuid" != "$pack_folder_uuid" ] && continue
+
+        if [ "$version" == "$pack_folder_version" ]; then
+            log "alert" "The $uuid pack has the same version of the installed"
+            continue
+        fi
+
+        rm -rf "$pack_folder_path"
+        mkdir "$pack_folder_path"
+        rsync -a --exclude='.git' "$path_to_restore/" "$pack_folder_path/"
+        log "success" "The files in $pack_folder_path has been restored"
+
+        update_version_in_packs_file "$uuid" "$version" "$world_packs_file"
+        update_version_in_pack_history_file "$uuid" "$version" "$world_pack_history_file"
+
+    done < <(find "$world_packs_path" -mindepth 1 -maxdepth 1 -type d)
 }
